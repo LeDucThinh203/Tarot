@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Arcana {
+  MAJOR
+  MINOR
+}
+
+enum Orientation {
+  UPRIGHT
+  REVERSED
+}
+
+enum ReadingTopic {
+  LOVE
+  CAREER
+  FINANCE
+  PERSONAL_GROWTH
+  GENERAL
+}
+
+enum SpreadType {
+  ONE_CARD
+  THREE_CARDS
+  FIVE_CARDS
+}
+
+enum ReadingStatus {
+  DRAWN
+  INTERPRETING
+  INTERPRETED
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+enum KnowledgeStatus {
+  READY
+  PROCESSING
+  FAILED
+}
+
+model User {
+  id             String           @id @default(uuid())
+  email          String           @unique
+  username       String?          @unique
+  passwordHash   String
+  displayName    String
+  role           UserRole         @default(USER)
+  isGuest        Boolean          @default(false)
+  disabledAt     DateTime?
+  guestClaimTokenHash String?      @unique
+  guestExpiresAt DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  sessions       RefreshSession[]
+  readings       Reading[]
+  aiUsage        AiUsage[]
+}
+
+model RefreshSession {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model TarotCard {
+  id              String       @id @default(uuid())
+  slug            String       @unique
+  name            String
+  nameVi          String
+  arcana          Arcana
+  suit            String?
+  number          Int?
+  description     String
+  uprightMeaning  String
+  reversedMeaning String
+  keywords        Json
+  imageUrl        String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  readingCards    ReadingCard[]
+
+  @@index([arcana, suit, number])
+  @@index([nameVi])
+}
+
+model Reading {
+  id             String          @id @default(uuid())
+  userId         String
+  querentName    String?
+  querentBirthDate DateTime?
+  querentGender  String?
+  question       String
+  topic          ReadingTopic
+  spreadType     SpreadType
+  status         ReadingStatus   @default(DRAWN)
+  idempotencyKey String?
+  guestChatCount Int              @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards          ReadingCard[]
+  interpretation Interpretation?
+  chatMessages   ReadingChatMessage[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model ReadingChatMessage {
+  id        String   @id @default(uuid())
+  readingId String
+  role      ChatRole
+  content   String
+  sources   Json
+  createdAt DateTime @default(now())
+  reading   Reading  @relation(fields: [readingId], references: [id], onDelete: Cascade)
+
+  @@index([readingId, createdAt])
+}
+
+model ReadingCard {
+  id          String      @id @default(uuid())
+  readingId   String
+  tarotCardId String
+  position    Int
+  positionName String
+  orientation Orientation
+  createdAt   DateTime    @default(now())
+  reading     Reading     @relation(fields: [readingId], references: [id], onDelete: Cascade)
+  tarotCard   TarotCard   @relation(fields: [tarotCardId], references: [id], onDelete: Restrict)
+
+  @@unique([readingId, position])
+  @@unique([readingId, tarotCardId])
+  @@index([readingId])
+}
+
+model Interpretation {
+  id                String   @id @default(uuid())
+  readingId         String   @unique
+  summary           String
+  overallMessage    String
+  advice            Json
+  challenges        Json
+  opportunities     Json
+  interpretationJson Json
+  sources           Json
+  modelName         String
+  promptVersion     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  reading           Reading  @relation(fields: [readingId], references: [id], onDelete: Cascade)
+}
+
+model KnowledgeDocument {
+  id        String          @id @default(uuid())
+  title     String
+  source    String          @unique
+  content   String
+  checksum  String
+  metadata  Json
+  status    KnowledgeStatus @default(READY)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  chunks    KnowledgeChunk[]
+
+  @@index([status, updatedAt])
+}
+
+model KnowledgeChunk {
+  id         String           @id @default(uuid())
+  documentId String
+  chunkIndex Int
+  content    String
+  embedding  Json?
+  metadata   Json
+  createdAt  DateTime         @default(now())
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+}
+
+model RagIndexState {
+  id              Int      @id @default(1)
+  embeddingModel  String
+  dimension       Int
+  updatedAt       DateTime @updatedAt
+}
+
+model AiUsage {
+  id          String   @id @default(uuid())
+  userId      String
+  readingId   String
+  modelName   String
+  promptTokens Int?
+  outputTokens Int?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([readingId])
+}
+
+

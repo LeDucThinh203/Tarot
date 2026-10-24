@@ -1,0 +1,23 @@
+{
+  "name": "mystic-tarot-ai",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["apps/frontend", "apps/backend"],
+  "engines": { "node": ">=22.0.0", "npm": ">=10.0.0" },
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c magenta,cyan \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:frontend": "npm --workspace apps/frontend run dev",
+    "dev:backend": "npm --workspace apps/backend run dev",
+    "server": "npm run dev:backend",
+    "build": "npm run build --workspace apps/backend && npm run build --workspace apps/frontend",
+    "lint": "npm run lint --workspace apps/backend && npm run lint --workspace apps/frontend",
+    "typecheck": "npm run typecheck --workspace apps/backend && npm run typecheck --workspace apps/frontend",
+    "test": "npm run test --workspace apps/backend",
+    "db:generate": "npm run db:generate --workspace apps/backend",
+    "db:migrate": "npm run db:migrate --workspace apps/backend",
+    "db:migrate:dev": "npm run db:migrate:dev --workspace apps/backend",
+    "db:seed": "npm run db:seed --workspace apps/backend",
+    "rag:ingest": "npm run rag:ingest --workspace apps/backend"
+  },
+  "devDependencies": { "concurrently": "^9.2.1", "dotenv-cli": "^10.0.0" }
+}

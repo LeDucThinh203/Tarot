@@ -1,0 +1,9 @@
+process.env.NODE_ENV ??= 'test';
+process.env.PORT ??= '3000';
+process.env.FRONTEND_URL ??= 'http://localhost:5173';
+process.env.DATABASE_URL ??= 'file:./prisma/dev.db';
+process.env.JWT_ACCESS_SECRET ??= 'test-access-secret-that-is-longer-than-thirty-two';
+process.env.JWT_REFRESH_SECRET ??= 'test-refresh-secret-that-is-longer-than-thirty-two';
+process.env.ACCESS_TOKEN_TTL ??= '15m';
+process.env.REFRESH_TOKEN_TTL_DAYS ??= '30';
+process.env.GEMINI_API_KEY ??= '';

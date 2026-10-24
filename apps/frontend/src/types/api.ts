@@ -1,0 +1,14 @@
+export type User = { id: string; email: string; username: string | null; displayName: string; role: 'USER' | 'ADMIN'; isGuest: boolean };
+export type UserDashboardStats = { createdAt: string; readings: number; interpretedReadings: number };
+export type AdminDashboardStats = { users: number; readings: number; interpretedReadings: number; cards: number; documents: number; chunks: number; aiRequestsToday: number };
+export type AdminUser = { id: string; email: string; username: string | null; displayName: string; role: 'USER' | 'ADMIN'; disabledAt: string | null; createdAt: string; _count: { readings: number } };
+export type KnowledgeDocument = { id: string; title: string; source: string; checksum: string; status: 'READY' | 'PROCESSING' | 'FAILED'; createdAt: string; updatedAt: string; _count: { chunks: number } };
+export type Topic = 'LOVE' | 'CAREER' | 'FINANCE' | 'PERSONAL_GROWTH' | 'GENERAL';
+export type SpreadType = 'ONE_CARD' | 'THREE_CARDS' | 'FIVE_CARDS';
+export type TarotCard = { id: string; slug: string; name: string; nameVi: string; arcana: 'MAJOR' | 'MINOR'; suit: string | null; number: number | null; description: string; uprightMeaning: string; reversedMeaning: string; keywords: string[] };
+export type ReadingCard = { id: string; position: number; positionName: string; orientation: 'UPRIGHT' | 'REVERSED'; tarotCard: TarotCard };
+export type Citation = { chunkId: string; title: string; source: string; excerpt: string; similarity: number };
+export type ReadingChatMessage = { id: string; readingId: string; role: 'USER' | 'ASSISTANT'; content: string; sources: Citation[]; createdAt: string };
+export type ReadingInterpretation = { id: string; readingId: string; summary: string; overallMessage: string; advice: string[]; challenges: string[]; opportunities: string[]; interpretationJson: { cards: Array<{ cardId: string; position: string; orientation: string; meaning: string; interpretation: string }>; connections: string[]; disclaimer: string; citations: Citation[]; limitedContext: boolean }; sources: Citation[]; modelName: string; promptVersion: string; createdAt: string };
+export type Reading = { id: string; querentName: string | null; querentBirthDate: string | null; querentGender: string | null; question: string; topic: Topic; spreadType: SpreadType; status: 'DRAWN' | 'INTERPRETING' | 'INTERPRETED'; createdAt: string; cards: ReadingCard[]; interpretation: ReadingInterpretation | null };
+export type ApiEnvelope<T> = { success: true; data: T; meta: { page?: number; limit?: number; total?: number; totalPages?: number } | null };
