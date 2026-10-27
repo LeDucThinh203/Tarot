@@ -46,7 +46,8 @@ export function Header() {
       <nav className={`nav-links ${open ? 'nav-open' : ''}`} aria-label="Điều hướng chính">
         <NavLink to="/" end onClick={close}>Khám phá</NavLink>
         <NavLink to="/library" onClick={close}>Thư viện bài</NavLink>
-        {user && <NavLink to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} onClick={close}>{user.role === 'ADMIN' ? 'Quản trị' : 'Không gian của tôi'}</NavLink>}
+        {user && <NavLink to="/dashboard" onClick={close}>Không gian của tôi</NavLink>}
+        {user?.role === 'ADMIN' && <NavLink to="/admin" onClick={close}>Quản trị</NavLink>}
         {user ? <><span className="nav-user">Chào, {user.displayName.split(' ')[0]}</span><button className="nav-login" onClick={handleSignOut}>Đăng xuất</button></> : <><NavLink className="nav-login" to="/login" onClick={close}>Đăng nhập</NavLink><Link className="button button-small" to="/reading" onClick={close}>Trải bài ngay <Sparkles size={14} /></Link></>}
       </nav>
     </div>

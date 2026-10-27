@@ -16,7 +16,6 @@ const adminLinks = [
 export function UserDashboardLayout() {
   const { user } = useAuth();
   const location = useLocation();
-  if (user?.role === 'ADMIN') return <Navigate to="/admin" replace />;
   const items = userLinks;
   return <DashboardFrame title="Góc của bạn" subtitle="Một nơi riêng để trở lại với những điều đã chiêm nghiệm." icon={<MoonStar size={18} />} items={items} pathname={location.pathname} displayName={user?.displayName} />;
 }
