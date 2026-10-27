@@ -15,7 +15,7 @@ type Raven = {
 };
 
 function makeRaven(w: number, h: number, fromEdge = false): Raven {
-  const scale = 0.6 + Math.random() * 0.9;
+  const scale = 1.2 + Math.random() * 1.2; // 1.2x → 2.4x, đủ lớn để thấy rõ
   const vx = (0.4 + Math.random() * 0.5) * (Math.random() < 0.5 ? 1 : -1);
   return {
     x: fromEdge ? (vx > 0 ? -30 : w + 30) : Math.random() * w,
@@ -23,7 +23,7 @@ function makeRaven(w: number, h: number, fromEdge = false): Raven {
     vx,
     vy: (Math.random() - 0.5) * 0.15,
     scale,
-    alpha: 0.12 + Math.random() * 0.18,
+    alpha: 0.55 + Math.random() * 0.35,
     wingPhase: Math.random() * Math.PI * 2,
     wingSpeed: 0.04 + Math.random() * 0.04,
     wobble: 0,
@@ -41,16 +41,15 @@ export function RavenFlock() {
     if (!ctx) return;
 
     let w = window.innerWidth;
-    let h = document.body.scrollHeight;
+    let h = window.innerHeight; // dùng innerHeight thay scrollHeight — canvas fixed nên chỉ cần viewport
     canvas.width = w;
     canvas.height = h;
 
-    // Khởi tạo 6 con quạ, vị trí ngẫu nhiên
     const ravens: Raven[] = Array.from({ length: 6 }, () => makeRaven(w, h, false));
 
     const resize = () => {
       w = window.innerWidth;
-      h = document.body.scrollHeight;
+      h = window.innerHeight;
       canvas.width = w;
       canvas.height = h;
     };
@@ -81,9 +80,10 @@ export function RavenFlock() {
         ctx.translate(r.x, r.y);
         ctx.scale(r.vx > 0 ? r.scale : -r.scale, r.scale * scaleY);
         ctx.globalAlpha = r.alpha;
-        ctx.fillStyle = '#1a1528';
-        ctx.shadowColor = 'rgba(185,161,240,0.3)';
-        ctx.shadowBlur = 8;
+        // Màu tím đậm đủ thấy trên nền đen, có lilac glow
+        ctx.fillStyle = '#6b5a8e';
+        ctx.shadowColor = 'rgba(185,161,240,0.6)';
+        ctx.shadowBlur = 12;
         const p = new Path2D(RAVEN_PATH);
         ctx.fill(p);
         ctx.restore();
