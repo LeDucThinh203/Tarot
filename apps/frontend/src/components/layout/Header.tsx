@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Menu, Sparkles, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/auth-context';
 
 // Tarot All-Seeing Eye — biểu tượng nhãn thần Tarot
@@ -24,7 +25,23 @@ export function Header() {
   const handleSignOut = async () => { await signOut().catch(() => undefined); close(); navigate('/'); };
   return <header className="site-header">
     <div className="nav-shell">
-      <Link className="brand" to="/" onClick={close}><span className="brand-mark"><TarotEyeIcon /></span><span>MYSTIC<span className="brand-gold"> TAROT</span><small>LẮNG NGHE · CHIÊM NGHIỆM</small></span></Link>
+      <Link className="brand" to="/" onClick={close}>
+        {/* Logo mark: outer ring xoay chậm, eye glow pulse */}
+        <motion.span
+          className="brand-mark"
+          animate={{ boxShadow: ['0 0 0px rgba(217,188,131,0)', '0 0 14px rgba(217,188,131,0.35)', '0 0 0px rgba(217,188,131,0)'] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <motion.span
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <TarotEyeIcon />
+          </motion.span>
+        </motion.span>
+        <span>MYSTIC<span className="brand-gold"> TAROT</span><small>LẮNG NGHE · CHIÊM NGHIỆM</small></span>
+      </Link>
       <button className="mobile-menu" type="button" aria-label={open ? 'Đóng menu' : 'Mở menu'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
       <nav className={`nav-links ${open ? 'nav-open' : ''}`} aria-label="Điều hướng chính">
         <NavLink to="/" end onClick={close}>Khám phá</NavLink>

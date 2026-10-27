@@ -94,7 +94,14 @@ export function HomePage() {
 
     <section className="featured-section"><div className="section-wrap featured-inner">
       <div className="featured-copy"><div className="eyebrow"><span className="eyebrow-line" /> BỘ BÀI 78 LÁ</div><h2>Mỗi lá bài,<br /><em>một câu chuyện.</em></h2><p>Từ những bước chuyển lớn đến những điều bình dị mỗi ngày — mỗi lá bài đều mở ra một cách nhìn riêng.</p><Link className="text-link" to="/library">Ghé thăm những lá bài <ArrowRight size={15} /></Link></div>
-      <div className="featured-cards">{data?.map((card, index) => <div className={`featured-card featured-card-${index + 1}`} key={card.id}><TarotCardView card={card} /></div>)}</div>
+      <div className="featured-cards">{data?.map((card, index) => (
+        <motion.div
+          className={`featured-card featured-card-${index + 1}`}
+          key={card.id}
+          animate={{ y: [0, -10 - index * 3, 0], rotate: index === 0 ? [-9, -7.5, -9] : index === 2 ? [9, 7.5, 9] : [0, 0.5, 0] }}
+          transition={{ duration: 4 + index * 0.7, repeat: Infinity, ease: 'easeInOut', delay: index * 0.9 }}
+        ><TarotCardView card={card} /></motion.div>
+      ))}</div>
     </div></section>
 
     <section className="section-wrap closing-cta"><div className="closing-stars">✧ <span>✦</span> ✧</div><div className="eyebrow">ĐIỀU GÌ ĐANG Ở TRONG TÂM TRÍ BẠN?</div><h2>Một câu hỏi có thể<br />mở ra <em>một góc nhìn mới.</em></h2><Link className="button" to="/reading">Bắt đầu trải bài <Sparkles size={16} /></Link><small>Bạn có thể bắt đầu ngay, chưa cần tạo tài khoản.</small></section>
