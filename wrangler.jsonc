@@ -1,0 +1,10 @@
+{
+  // Cloudflare Workers static assets config for the React/Vite frontend
+  "name": "tarot",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./apps/frontend/dist",
+    // Enable SPA mode: all unmatched routes serve index.html (required for React Router)
+    "not_found_handling": "single-page-application"
+  }
+}
