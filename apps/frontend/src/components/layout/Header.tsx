@@ -1,7 +1,20 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, MoonStar, Sparkles, X } from 'lucide-react';
+import { Menu, Sparkles, X } from 'lucide-react';
 import { useAuth } from '../../contexts/auth-context';
+
+// Tarot All-Seeing Eye — biểu tượng nhãn thần Tarot
+function TarotEyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3.5 3.5" opacity="0.45"/>
+      <path d="M10 32 C17 18, 47 18, 54 32 C47 46, 17 46, 10 32 Z" stroke="currentColor" stroke-width="1.6" fill="none"/>
+      <circle cx="32" cy="32" r="9" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.7"/>
+      <circle cx="32" cy="32" r="4.5" fill="currentColor" opacity="0.92"/>
+      <path d="M32 8 L33.4 12.4 L38 12.4 L34.3 15 L35.7 19.4 L32 16.8 L28.3 19.4 L29.7 15 L26 12.4 L30.6 12.4 Z" fill="currentColor" opacity="0.8"/>
+    </svg>
+  );
+}
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -11,7 +24,7 @@ export function Header() {
   const handleSignOut = async () => { await signOut().catch(() => undefined); close(); navigate('/'); };
   return <header className="site-header">
     <div className="nav-shell">
-      <Link className="brand" to="/" onClick={close}><span className="brand-mark"><MoonStar size={20} /></span><span>MYSTIC<span className="brand-gold"> TAROT</span><small>LẮNG NGHE · CHIÊM NGHIỆM</small></span></Link>
+      <Link className="brand" to="/" onClick={close}><span className="brand-mark"><TarotEyeIcon /></span><span>MYSTIC<span className="brand-gold"> TAROT</span><small>LẮNG NGHE · CHIÊM NGHIỆM</small></span></Link>
       <button className="mobile-menu" type="button" aria-label={open ? 'Đóng menu' : 'Mở menu'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
       <nav className={`nav-links ${open ? 'nav-open' : ''}`} aria-label="Điều hướng chính">
         <NavLink to="/" end onClick={close}>Khám phá</NavLink>

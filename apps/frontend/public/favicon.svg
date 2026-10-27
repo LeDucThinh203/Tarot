@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="31" fill="#080811" stroke="#d9bc83" stroke-width="1.2"/>
+  <!-- Outer dashed ring -->
+  <circle cx="32" cy="32" r="26" stroke="#d9bc83" stroke-width="0.6" stroke-dasharray="3 3" opacity="0.5"/>
+  <!-- All-seeing eye shape -->
+  <path d="M12 32 C18 20, 46 20, 52 32 C46 44, 18 44, 12 32 Z" stroke="#d9bc83" stroke-width="1.2" fill="none"/>
+  <!-- Iris -->
+  <circle cx="32" cy="32" r="8" stroke="#d9bc83" stroke-width="1" fill="rgba(184,164,223,0.12)"/>
+  <!-- Pupil -->
+  <circle cx="32" cy="32" r="4" fill="#d9bc83" opacity="0.9"/>
+  <!-- Star above eye -->
+  <path d="M32 10 L33.2 13.7 L37 13.7 L34 16 L35.2 19.7 L32 17.4 L28.8 19.7 L30 16 L27 13.7 L30.8 13.7 Z" fill="#d9bc83" opacity="0.85"/>
+  <!-- Small dots constellation -->
+  <circle cx="19" cy="26" r="1" fill="#b9a1f0" opacity="0.7"/>
+  <circle cx="45" cy="26" r="1" fill="#b9a1f0" opacity="0.7"/>
+  <circle cx="19" cy="38" r="0.8" fill="#d9bc83" opacity="0.5"/>
+  <circle cx="45" cy="38" r="0.8" fill="#d9bc83" opacity="0.5"/>
+</svg>
