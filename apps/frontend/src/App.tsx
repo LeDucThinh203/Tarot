@@ -8,7 +8,6 @@ import { SiteLayout } from './components/layout/SiteLayout';
 import { AdminDashboardLayout, UserDashboardLayout } from './components/layout/DashboardLayouts';
 import { useAuth } from './contexts/auth-context';
 import { MysticCursor } from './components/common/MysticCursor';
-import { RavenFlock } from './components/common/RavenFlock';
 import { MoonPhase } from './components/common/MoonPhase';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
@@ -34,7 +33,7 @@ function AdminRoute() {
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } } });
 export default function App() {
-  return <QueryClientProvider client={queryClient}><AuthProvider><BrowserRouter><MysticCursor /><RavenFlock /><MoonPhase /><Suspense fallback={<div className="page-loader" role="status">Đang mở cánh cửa...</div>}><Routes>
+  return <QueryClientProvider client={queryClient}><AuthProvider><BrowserRouter><MysticCursor /><MoonPhase /><Suspense fallback={<div className="page-loader" role="status">Đang mở cánh cửa...</div>}><Routes>
     <Route element={<SiteLayout />}>
       <Route index element={<HomePage />} /><Route path="library" element={<LibraryPage />} /><Route path="library/:slug" element={<TarotCardPage />} />
       <Route path="login" element={<LoginPage />} /><Route path="register" element={<RegisterPage />} />
