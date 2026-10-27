@@ -22,11 +22,66 @@ export function HomePage() {
         <div className="hero-actions"><Link className="button" to="/reading">Bắt đầu trải bài <ArrowRight size={17} /></Link><a className="text-link" href="#how-it-works">Tìm hiểu hành trình <ArrowDown size={15} /></a></div>
         <div className="hero-note"><span className="note-dot" /> RIÊNG TƯ · DỊU DÀNG · BẠN TỰ LỰA CHỌN</div>
       </div>
+
       <div className="hero-art" aria-label="Hình minh họa lá bài Tarot dưới bầu trời sao" role="img">
-        <div className="hero-glow" /><span className="hero-constellation const-a">✦</span><span className="hero-constellation const-b">✧</span><span className="hero-constellation const-c">·</span>
-        <div className="hero-tarot-card"><div className="hero-card-top">XVII <span>✧</span> 0</div><span className="hero-moon">☾</span><div className="hero-figure"><span className="figure-halo" /><span className="figure-body" /><span className="figure-star">✦</span></div><div className="hero-card-caption">ÁNH SÁNG TĨNH LẶNG</div></div>
-        <div className="orbit orbit-a" /><div className="orbit orbit-b" /><div className="hero-art-caption"><span>BẦU TRỜI NỘI TÂM</span><small>XVII · KHOẢNH KHẮC SÁNG TỎ</small></div>
+        {/* Glow pulse */}
+        <motion.div
+          className="hero-glow"
+          animate={{ scale: [1, 1.18, 1], opacity: [0.7, 1, 0.7] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        />
+
+        {/* Constellation stars — nhấp nháy lệch pha */}
+        <motion.span className="hero-constellation const-a"
+          animate={{ opacity: [1, 0.2, 1], scale: [1, 1.4, 1] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}>✦</motion.span>
+        <motion.span className="hero-constellation const-b"
+          animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.3, 1] }}
+          transition={{ duration: 3.1, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}>✧</motion.span>
+        <motion.span className="hero-constellation const-c"
+          animate={{ opacity: [1, 0.3, 1] }}
+          transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}>·</motion.span>
+
+        {/* Lá bài — float lên xuống + lắc nhẹ */}
+        <motion.div
+          className="hero-tarot-card"
+          initial={{ opacity: 0, y: 30, rotate: 2 }}
+          animate={{ opacity: 1, y: [0, -12, 0], rotate: [2, 1.2, 2] }}
+          transition={{
+            opacity: { duration: 0.8 },
+            y: { duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+            rotate: { duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+          }}
+        >
+          <div className="hero-card-top">XVII <span>✧</span> 0</div>
+          <span className="hero-moon">☾</span>
+          <div className="hero-figure">
+            <span className="figure-halo" />
+            <span className="figure-body" />
+            {/* Ngôi sao trên hình nhân vật — nhấp nháy */}
+            <motion.span className="figure-star"
+              animate={{ opacity: [1, 0.3, 1], textShadow: ['0 0 18px #e1bd70', '0 0 6px #e1bd70', '0 0 28px #e1bd70'] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>✦</motion.span>
+          </div>
+          <div className="hero-card-caption">ÁNH SÁNG TĨNH LẶNG</div>
+        </motion.div>
+
+        {/* Orbit A — xoay chậm */}
+        <motion.div
+          className="orbit orbit-a"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
+        />
+        {/* Orbit B — xoay ngược */}
+        <motion.div
+          className="orbit orbit-b"
+          animate={{ rotate: -360 }}
+          transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+        />
+
+        <div className="hero-art-caption"><span>BẦU TRỜI NỘI TÂM</span><small>XVII · KHOẢNH KHẮC SÁNG TỎ</small></div>
       </div>
+
       <div className="hero-bottom-mark"><span>01</span><span className="hero-mark-line" /><span>CUỘN XUỐNG ĐỂ KHÁM PHÁ</span></div>
     </section>
 
