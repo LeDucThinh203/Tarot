@@ -6,8 +6,36 @@ import { AppError, unauthorized } from '../../common/errors.js';
 import type { LoginInput, RegisterInput } from './auth.schema.js';
 import { hashPassword, verifyPassword } from './password.service.js';
 import { createAccessToken, createRefreshToken, hashRefreshToken } from './token.service.js';
+
 type SessionUser = { id: string; email: string; username: string | null; displayName: string; role: 'USER' | 'ADMIN'; isGuest: boolean };
 const publicUser = (user: SessionUser) => ({ id: user.id, email: user.email, username: user.username, displayName: user.displayName, role: user.role, isGuest: user.isGuest });
+
+// Track failed login attempts per account identifier (email/username)
+const MAX_FAILED_ATTEMPTS = 10;
+const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+type FailRecord = { count: number; firstAt: number };
+const failedAttempts = new Map<string, FailRecord>();
+
+function recordFailure(identifier: string): void {
+  const now = Date.now();
+  const rec = failedAttempts.get(identifier);
+  if (!rec || now - rec.firstAt > LOCKOUT_WINDOW_MS) {
+    failedAttempts.set(identifier, { count: 1, firstAt: now });
+  } else {
+    rec.count += 1;
+  }
+}
+
+function isLockedOut(identifier: string): boolean {
+  const rec = failedAttempts.get(identifier);
+  if (!rec) return false;
+  if (Date.now() - rec.firstAt > LOCKOUT_WINDOW_MS) { failedAttempts.delete(identifier); return false; }
+  return rec.count >= MAX_FAILED_ATTEMPTS;
+}
+
+function clearFailures(identifier: string): void {
+  failedAttempts.delete(identifier);
+}
 
 export async function register(input: RegisterInput, guestClaimToken?: string) {
   const exists = await prisma.user.findFirst({ where: { OR: [{ email: input.email }, { username: input.username }] }, select: { id: true } });
@@ -28,11 +56,19 @@ export async function register(input: RegisterInput, guestClaimToken?: string) {
 }
 
 export async function login(input: LoginInput, guestClaimToken?: string) {
-  const user = input.identifier.includes('@')
-    ? await prisma.user.findUnique({ where: { email: input.identifier } })
-    : await prisma.user.findUnique({ where: { username: input.identifier } });
+  const identifier = input.identifier.toLowerCase().trim();
+  if (isLockedOut(identifier)) {
+    throw new AppError(429, 'TOO_MANY_ATTEMPTS', 'Tài khoản tạm thời bị khóa do nhập sai mật khẩu quá nhiều lần. Vui lòng thử lại sau 15 phút.');
+  }
+  const user = identifier.includes('@')
+    ? await prisma.user.findUnique({ where: { email: identifier } })
+    : await prisma.user.findUnique({ where: { username: identifier } });
   if (user?.disabledAt) throw new AppError(401, 'INVALID_CREDENTIALS', 'Email, tên đăng nhập hoặc mật khẩu chưa chính xác.');
-  if (!user || !(await verifyPassword(input.password, user.passwordHash))) throw new AppError(401, 'INVALID_CREDENTIALS', 'Email hoặc tên đăng nhập hay mật khẩu chưa chính xác.');
+  if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
+    recordFailure(identifier);
+    throw new AppError(401, 'INVALID_CREDENTIALS', 'Email hoặc tên đăng nhập hay mật khẩu chưa chính xác.');
+  }
+  clearFailures(identifier);
   if (guestClaimToken) await prisma.$transaction((tx) => claimGuestReadings(tx, user.id, guestClaimToken));
   return await createSession(user);
 }

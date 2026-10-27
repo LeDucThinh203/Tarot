@@ -27,10 +27,8 @@ app.use(pinoHttp({ logger, quietReqLogger: true, autoLogging: { ignore: (req) =>
 
 const limited = (_req: express.Request, res: express.Response) => { res.status(429).json({ success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.', details: [] } }); };
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 180, standardHeaders: 'draft-8', legacyHeaders: false, handler: limited, skip: (req) => req.path.startsWith('/health') || req.path === '/docs' || req.path === '/openapi.json' });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, handler: limited });
 const aiLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 12, standardHeaders: 'draft-8', legacyHeaders: false, handler: limited });
 app.use('/api/v1', apiLimiter);
-app.use('/api/v1/auth', authLimiter);
 app.use('/api/v1/readings/:id/interpretation', aiLimiter);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapi, { explorer: true, swaggerOptions: { persistAuthorization: false, displayRequestDuration: true } }));
 app.get('/api/openapi.json', (_req, res) => res.json(openapi));
