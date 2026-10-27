@@ -35,7 +35,8 @@ async function main() {
       await prisma.user.upsert({
         where: { email: input.email },
         create: { email: input.email, username: input.username, passwordHash, displayName: input.displayName, role: account.role },
-        update: { username: input.username, passwordHash, displayName: input.displayName, role: account.role },
+        // Không update passwordHash — giữ nguyên password đã set, chỉ update metadata
+        update: { username: input.username, displayName: input.displayName, role: account.role },
       });
     }
     console.info('Seeded one ADMIN and one USER account with bcrypt-hashed passwords.');
