@@ -3,7 +3,8 @@
   "name": "tarot",
   "compatibility_date": "2025-01-01",
   "assets": {
-    "directory": "./apps/frontend/dist"
-    // SPA routing is handled by public/_redirects: /* /index.html 200
+    "directory": "./apps/frontend/dist",
+    // SPA mode: unmatched routes serve index.html so React Router can handle them
+    "not_found_handling": "single-page-application"
   }
 }
