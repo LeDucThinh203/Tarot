@@ -85,7 +85,34 @@ export function HomePage() {
       <div className="hero-bottom-mark"><span>01</span><span className="hero-mark-line" /><span>CUỘN XUỐNG ĐỂ KHÁM PHÁ</span></div>
     </section>
 
-    <section className="intro-strip"><div className="section-wrap intro-inner"><Feather size={20} /><p>Tarot không quyết định tương lai thay bạn. <span>Đó là một chiếc gương — để nhìn hiện tại bằng một góc độ khác.</span></p></div></section>
+    <section className="intro-strip">
+      <div className="section-wrap intro-inner">
+        <motion.span animate={{ rotate: [0, -15, 0, 15, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 3 }}>
+          <Feather size={20} />
+        </motion.span>
+        <p>
+          {'Tarot không quyết định tương lai thay bạn.'.split(' ').map((word, i) => (
+            <motion.span key={i} style={{ display: 'inline-block', marginRight: '0.28em' }}
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08, duration: 0.4, ease: 'easeOut' }}
+            >{word}</motion.span>
+          ))}
+          {' '}
+          <span style={{ color: 'var(--muted)' }}>
+            {'Đó là một chiếc gương — để nhìn hiện tại bằng một góc độ khác.'.split(' ').map((word, i) => (
+              <motion.span key={i} style={{ display: 'inline-block', marginRight: '0.28em' }}
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.6 + i * 0.07, duration: 0.4, ease: 'easeOut' }}
+              >{word}</motion.span>
+            ))}
+          </span>
+        </p>
+      </div>
+    </section>
 
     <section id="how-it-works" className="section-wrap process-section">
       <div className="section-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> MỘT KHOẢNG LẶNG DÀNH CHO BẠN</div><h2>Chậm lại. <em>Hỏi. Lắng nghe.</em></h2></div><p>Mỗi trải bài bắt đầu từ điều đang ở trong tâm trí bạn — và khép lại bằng một góc nhìn để mang theo.</p></div>
