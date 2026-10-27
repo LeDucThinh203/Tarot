@@ -1,12 +1,11 @@
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { env } from '../src/config/env.js';
 import { tarotCards } from '../src/modules/tarot-cards/cards-data.js';
 import { registerSchema } from '../src/modules/auth/auth.schema.js';
 import { hashPassword } from '../src/modules/auth/password.service.js';
-import { getRuntimeDatabaseUrl } from '../src/infrastructure/database/database-url.js';
 
-const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: getRuntimeDatabaseUrl(env.DATABASE_URL) }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: env.DATABASE_URL }) });
 
 async function main() {
   for (const card of tarotCards) {
