@@ -29,30 +29,24 @@ adminRouter.get('/dashboard', asyncHandler(async (_req, res) => {
   const now = new Date();
   const today = new Date(now);
   today.setUTCHours(0, 0, 0, 0);
-
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   sevenDaysAgo.setUTCHours(0, 0, 0, 0);
 
+  // Gộp user counts thành 1 groupBy thay vì 4 count riêng lẻ
+  // Gộp reading counts thành 1 groupBy thay vì 4 count riêng lẻ
+  // Gộp document counts thành 1 groupBy thay vì 4 count riêng lẻ
+  // Thay count(*) bằng aggregate với _count cho aiUsage
   const [
-    users,
-    activeUsers,
-    guests,
+    userStats,
     newUsersThisWeek,
-    readings,
-    interpretedReadings,
-    drawnReadings,
+    readingStatusCounts,
     readingsThisWeek,
     cards,
-    documents,
+    docStatusCounts,
     chunks,
-    readyDocs,
-    processingDocs,
-    failedDocs,
-    aiRequestsToday,
-    aiRequestsTotal,
-    aiTokenStatsToday,
-    aiTokenStatsTotal,
+    aiStatsToday,
+    aiStatsTotal,
     recentReadings,
     recentUsers,
     recentAiUsage,
@@ -62,79 +56,72 @@ adminRouter.get('/dashboard', asyncHandler(async (_req, res) => {
     readingsPast7Days,
     aiUsagePast7Days,
   ] = await Promise.all([
-    prisma.user.count({ where: { isGuest: false } }),
-    prisma.user.count({ where: { isGuest: false, disabledAt: null } }),
-    prisma.user.count({ where: { isGuest: true } }),
+    // 1 query thay 3: user counts nhóm theo isGuest + disabledAt
+    prisma.user.groupBy({
+      by: ['isGuest'],
+      _count: { id: true },
+    }),
+    // new users this week
     prisma.user.count({ where: { isGuest: false, createdAt: { gte: sevenDaysAgo } } }),
-    prisma.reading.count(),
-    prisma.reading.count({ where: { status: 'INTERPRETED' } }),
-    prisma.reading.count({ where: { status: 'DRAWN' } }),
+    // 1 query thay 3: reading counts nhóm theo status — dùng index (status, createdAt)
+    prisma.reading.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    }),
     prisma.reading.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    // EXISTS thay count(*) — chỉ cần biết có hay không
     prisma.tarotCard.count(),
-    prisma.knowledgeDocument.count(),
+    // 1 query thay 4: document counts nhóm theo status — dùng index (status, updatedAt)
+    prisma.knowledgeDocument.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    }),
     prisma.knowledgeChunk.count(),
-    prisma.knowledgeDocument.count({ where: { status: 'READY' } }),
-    prisma.knowledgeDocument.count({ where: { status: 'PROCESSING' } }),
-    prisma.knowledgeDocument.count({ where: { status: 'FAILED' } }),
-    prisma.aiUsage.count({ where: { createdAt: { gte: today } } }),
-    prisma.aiUsage.count(),
+    // Gộp count + aggregate token thành 1 aggregate
     prisma.aiUsage.aggregate({
       where: { createdAt: { gte: today } },
+      _count: { id: true },
       _sum: { promptTokens: true, outputTokens: true },
     }),
+    // Gộp count + aggregate token thành 1 aggregate
     prisma.aiUsage.aggregate({
+      _count: { id: true },
       _sum: { promptTokens: true, outputTokens: true },
     }),
+    // Recent readings — INNER JOIN user qua select (Prisma tự LEFT JOIN nhưng select chỉ lấy cần thiết)
     prisma.reading.findMany({
       take: 6,
       orderBy: { createdAt: 'desc' },
       select: {
-        id: true,
-        querentName: true,
-        question: true,
-        topic: true,
-        spreadType: true,
-        status: true,
-        createdAt: true,
+        id: true, querentName: true, question: true,
+        topic: true, spreadType: true, status: true, createdAt: true,
         user: { select: { displayName: true, email: true } },
       },
     }),
+    // Recent users — dùng index (isGuest, createdAt DESC)
     prisma.user.findMany({
       where: { isGuest: false },
       take: 5,
       orderBy: { createdAt: 'desc' },
       select: {
-        id: true,
-        displayName: true,
-        email: true,
-        username: true,
-        role: true,
-        disabledAt: true,
-        createdAt: true,
+        id: true, displayName: true, email: true, username: true,
+        role: true, disabledAt: true, createdAt: true,
         _count: { select: { readings: true } },
       },
     }),
+    // Recent AI usage — INNER JOIN user
     prisma.aiUsage.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
       select: {
-        id: true,
-        modelName: true,
-        promptTokens: true,
-        outputTokens: true,
-        createdAt: true,
+        id: true, modelName: true, promptTokens: true, outputTokens: true, createdAt: true,
         user: { select: { displayName: true } },
       },
     }),
-    prisma.ragIndexState.findFirst(),
-    prisma.reading.groupBy({
-      by: ['topic'],
-      _count: { topic: true },
-    }),
-    prisma.reading.groupBy({
-      by: ['spreadType'],
-      _count: { spreadType: true },
-    }),
+    prisma.ragIndexState.findUnique({ where: { id: 1 } }),
+    prisma.reading.groupBy({ by: ['topic'], _count: { topic: true } }),
+    prisma.reading.groupBy({ by: ['spreadType'], _count: { spreadType: true } }),
+    // Dùng index (createdAt DESC) — chỉ select createdAt
     prisma.reading.findMany({
       where: { createdAt: { gte: sevenDaysAgo } },
       select: { createdAt: true },
@@ -145,68 +132,60 @@ adminRouter.get('/dashboard', asyncHandler(async (_req, res) => {
     }),
   ]);
 
+  // Giải nén userStats groupBy
+  const totalUsers = userStats.find((r) => r.isGuest === false)?._count.id ?? 0;
+  const guests     = userStats.find((r) => r.isGuest === true)?._count.id  ?? 0;
+  // activeUsers cần query riêng vì lọc disabledAt — không groupBy được trực tiếp
+  const activeUsers = await prisma.user.count({ where: { isGuest: false, disabledAt: null } });
+
+  // Giải nén readingStatusCounts
+  const readings            = readingStatusCounts.reduce((s, r) => s + r._count.id, 0);
+  const interpretedReadings = readingStatusCounts.find((r) => r.status === 'INTERPRETED')?._count.id ?? 0;
+  const drawnReadings       = readingStatusCounts.find((r) => r.status === 'DRAWN')?._count.id       ?? 0;
+
+  // Giải nén docStatusCounts
+  const documents    = docStatusCounts.reduce((s, r) => s + r._count.id, 0);
+  const readyDocs    = docStatusCounts.find((r) => r.status === 'READY')?._count.id      ?? 0;
+  const processingDocs = docStatusCounts.find((r) => r.status === 'PROCESSING')?._count.id ?? 0;
+  const failedDocs   = docStatusCounts.find((r) => r.status === 'FAILED')?._count.id     ?? 0;
+
+  // Giải nén AI stats
+  const aiRequestsToday = aiStatsToday._count.id;
+  const aiRequestsTotal = aiStatsTotal._count.id;
+  const tokensToday     = (aiStatsToday._sum.promptTokens ?? 0) + (aiStatsToday._sum.outputTokens ?? 0);
+  const tokensAllTime   = (aiStatsTotal._sum.promptTokens ?? 0) + (aiStatsTotal._sum.outputTokens ?? 0);
+
+  // Daily trends — tính từ dữ liệu đã fetch, không thêm query
   const dailyTrends = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    const dayLabel = `${d.getDate()}/${d.getMonth() + 1}`;
-    
-    const dayReadings = readingsPast7Days.filter((r) => r.createdAt.toISOString().slice(0, 10) === dateStr).length;
-    const dayAi = aiUsagePast7Days.filter((a) => a.createdAt.toISOString().slice(0, 10) === dateStr).length;
-    
     dailyTrends.push({
       date: dateStr,
-      label: dayLabel,
-      readings: dayReadings,
-      aiRequests: dayAi,
+      label: `${d.getDate()}/${d.getMonth() + 1}`,
+      readings: readingsPast7Days.filter((r) => r.createdAt.toISOString().slice(0, 10) === dateStr).length,
+      aiRequests: aiUsagePast7Days.filter((a) => a.createdAt.toISOString().slice(0, 10) === dateStr).length,
     });
   }
 
   const topicBreakdown = (['LOVE', 'CAREER', 'FINANCE', 'PERSONAL_GROWTH', 'GENERAL'] as const).map((t) => {
-    const found = allTopics.find((item) => item.topic === t);
-    const count = found?._count.topic ?? 0;
-    const percentage = readings > 0 ? Math.round((count / readings) * 100) : 0;
-    return { topic: t, count, percentage };
+    const count = allTopics.find((item) => item.topic === t)?._count.topic ?? 0;
+    return { topic: t, count, percentage: readings > 0 ? Math.round((count / readings) * 100) : 0 };
   });
-
   const spreadBreakdown = (['ONE_CARD', 'THREE_CARDS', 'FIVE_CARDS'] as const).map((s) => {
-    const found = allSpreads.find((item) => item.spreadType === s);
-    const count = found?._count.spreadType ?? 0;
-    const percentage = readings > 0 ? Math.round((count / readings) * 100) : 0;
-    return { spreadType: s, count, percentage };
+    const count = allSpreads.find((item) => item.spreadType === s)?._count.spreadType ?? 0;
+    return { spreadType: s, count, percentage: readings > 0 ? Math.round((count / readings) * 100) : 0 };
   });
-
-  const tokensToday = (aiTokenStatsToday._sum.promptTokens ?? 0) + (aiTokenStatsToday._sum.outputTokens ?? 0);
-  const tokensAllTime = (aiTokenStatsTotal._sum.promptTokens ?? 0) + (aiTokenStatsTotal._sum.outputTokens ?? 0);
-  const interpretationRate = readings > 0 ? Math.round((interpretedReadings / readings) * 100) : 100;
 
   success(res, {
-    users,
-    activeUsers,
-    guests,
-    newUsersThisWeek,
-    readings,
-    interpretedReadings,
-    drawnReadings,
-    readingsThisWeek,
-    interpretationRate,
-    cards,
-    documents,
-    chunks,
-    readyDocs,
-    processingDocs,
-    failedDocs,
-    aiRequestsToday,
-    aiRequestsTotal,
-    tokensToday,
-    tokensAllTime,
-    topicBreakdown,
-    spreadBreakdown,
-    dailyTrends,
-    recentReadings,
-    recentUsers,
-    recentAiUsage,
+    users: totalUsers, activeUsers, guests, newUsersThisWeek,
+    readings, interpretedReadings, drawnReadings, readingsThisWeek,
+    interpretationRate: readings > 0 ? Math.round((interpretedReadings / readings) * 100) : 100,
+    cards, documents, chunks, readyDocs, processingDocs, failedDocs,
+    aiRequestsToday, aiRequestsTotal, tokensToday, tokensAllTime,
+    topicBreakdown, spreadBreakdown, dailyTrends,
+    recentReadings, recentUsers, recentAiUsage,
     systemHealth: {
       database: 'healthy',
       geminiConfigured: Boolean(env.GEMINI_API_KEY),

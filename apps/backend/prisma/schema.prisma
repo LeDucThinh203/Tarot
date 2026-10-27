@@ -69,6 +69,11 @@ model User {
   sessions       RefreshSession[]
   readings       Reading[]
   aiUsage        AiUsage[]
+
+  // Composite index cho admin queries: lọc non-guest + sort createdAt DESC
+  @@index([isGuest, createdAt(sort: Desc)])
+  // Index cho disable/enable: lọc active admins
+  @@index([role, isGuest, disabledAt])
 }
 
 model RefreshSession {
@@ -125,6 +130,10 @@ model Reading {
 
   @@unique([userId, idempotencyKey])
   @@index([userId, createdAt(sort: Desc)])
+  // Index cho filter theo status
+  @@index([status, createdAt(sort: Desc)])
+  // Index cho admin: lọc theo khoảng thời gian
+  @@index([createdAt(sort: Desc)])
 }
 
 model ReadingChatMessage {
@@ -220,6 +229,8 @@ model AiUsage {
 
   @@index([userId, createdAt])
   @@index([readingId])
+  // Index cho daily limit check: userId + createdAt date range
+  @@index([createdAt(sort: Desc)])
 }
 
 

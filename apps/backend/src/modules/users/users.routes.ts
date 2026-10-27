@@ -19,12 +19,20 @@ usersRouter.get('/me', asyncHandler(async (req, res) => {
   success(res, user);
 }));
 usersRouter.get('/me/dashboard', asyncHandler(async (req, res) => {
-  const [user, readings, interpretedReadings] = await Promise.all([
-    prisma.user.findUnique({ where: { id: req.user!.id }, select: { createdAt: true } }),
-    prisma.reading.count({ where: { userId: req.user!.id } }),
-    prisma.reading.count({ where: { userId: req.user!.id, status: 'INTERPRETED' } }),
+  const userId = req.user!.id;
+  // 1 query user + 1 aggregate thay vì 1 findUnique + 2 count riêng lẻ
+  const [user, readingStats] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }),
+    // groupBy status — dùng index (userId, createdAt DESC) để filter userId
+    prisma.reading.groupBy({
+      by: ['status'],
+      where: { userId },
+      _count: { id: true },
+    }),
   ]);
   if (!user) throw notFound('User not found.');
+  const readings            = readingStats.reduce((s, r) => s + r._count.id, 0);
+  const interpretedReadings = readingStats.find((r) => r.status === 'INTERPRETED')?._count.id ?? 0;
   success(res, { createdAt: user.createdAt, readings, interpretedReadings });
 }));
 usersRouter.patch('/me', validate(patchSchema), asyncHandler(async (req, res) => {

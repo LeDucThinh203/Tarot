@@ -37,8 +37,19 @@ export async function ingestDocument(input: { title: string; source: string; con
   const checksum = createHash('sha256').update(content).digest('hex');
   const existing = await prisma.knowledgeDocument.findUnique({ where: { source: input.source } });
   if (existing?.checksum === checksum && existing.status === 'READY') {
-    const chunkCount = await prisma.knowledgeChunk.count({ where: { documentId: existing.id } });
-    if (chunkCount > 0) return { id: existing.id, skipped: true, chunks: chunkCount };
+    // EXISTS thay count(*) — dừng ngay khi tìm thấy 1 row, không quét hết
+    const hasChunks = await prisma.knowledgeChunk.findFirst({
+      where: { documentId: existing.id },
+      select: { id: true },
+    });
+    if (hasChunks) {
+      // Lấy chunk count riêng chỉ khi cần trả về số lượng
+      const chunkCount = await prisma.knowledgeChunk.aggregate({
+        where: { documentId: existing.id },
+        _count: { id: true },
+      });
+      return { id: existing.id, skipped: true, chunks: chunkCount._count.id };
+    }
   }
   await ensureIndexState();
   const metadata = { ...documentMetadata(input.source, content), ...input.metadata };

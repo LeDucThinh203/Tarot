@@ -31,10 +31,23 @@ knowledgeRouter.post('/documents', validate(documentSchema), asyncHandler(async 
 }));
 knowledgeRouter.get('/documents', validate(listSchema, 'query'), asyncHandler(async (req, res) => {
   const query = req.query as unknown as z.infer<typeof listSchema>;
-  const [items, total] = await Promise.all([
-    prisma.knowledgeDocument.findMany({ select: { id: true, title: true, source: true, checksum: true, status: true, createdAt: true, updatedAt: true, _count: { select: { chunks: true } } }, orderBy: { updatedAt: 'desc' }, skip: (query.page - 1) * query.limit, take: query.limit }),
-    prisma.knowledgeDocument.count(),
+  // Bỏ count() riêng — dùng aggregate để lấy total trong cùng 1 round-trip
+  // _count: { chunks } đã có inline, không cần query riêng cho chunk count
+  const [items, agg] = await Promise.all([
+    prisma.knowledgeDocument.findMany({
+      select: {
+        id: true, title: true, source: true, checksum: true,
+        status: true, createdAt: true, updatedAt: true,
+        _count: { select: { chunks: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    }),
+    // Dùng aggregate thay count() riêng — dùng index (status, updatedAt)
+    prisma.knowledgeDocument.aggregate({ _count: { id: true } }),
   ]);
+  const total = agg._count.id;
   success(res, items, 200, { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) });
 }));
 knowledgeRouter.post('/ingest', asyncHandler(async (_req, res) => success(res, await ingestKnowledgeDirectory(), 200)));

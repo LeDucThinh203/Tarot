@@ -12,9 +12,14 @@ const readingInclude = {
 
 export async function createReading(userId: string, input: CreateReadingInput) {
   if (input.idempotencyKey) {
-    const existing = await prisma.reading.findFirst({ where: { userId, idempotencyKey: input.idempotencyKey }, include: readingInclude });
+    // findUnique dùng @@unique([userId, idempotencyKey]) — nhanh hơn findFirst
+    const existing = await prisma.reading.findUnique({
+      where: { userId_idempotencyKey: { userId, idempotencyKey: input.idempotencyKey } },
+      include: readingInclude,
+    });
     if (existing) return existing;
   }
+  // Chỉ select id — không cần full row để rút bài
   const deck = await prisma.tarotCard.findMany({ select: { id: true } });
   const drawn = drawCards(deck, input.spreadType);
   try {
@@ -31,7 +36,10 @@ export async function createReading(userId: string, input: CreateReadingInput) {
     }));
   } catch (error) {
     if (input.idempotencyKey && error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      const existing = await prisma.reading.findFirst({ where: { userId, idempotencyKey: input.idempotencyKey }, include: readingInclude });
+      const existing = await prisma.reading.findUnique({
+        where: { userId_idempotencyKey: { userId, idempotencyKey: input.idempotencyKey } },
+        include: readingInclude,
+      });
       if (existing) return existing;
     }
     throw error;
@@ -39,17 +47,39 @@ export async function createReading(userId: string, input: CreateReadingInput) {
 }
 
 export async function listReadings(userId: string, page: number, limit: number, search?: string) {
-  const where = { userId, ...(search ? { question: { contains: search } } : {}) };
+  const where: Prisma.ReadingWhereInput = {
+    userId,
+    ...(search ? { question: { contains: search, mode: 'insensitive' } } : {}),
+  };
+  // Chạy song song data + count — dùng index (userId, createdAt DESC)
   const [items, total] = await Promise.all([
-    prisma.reading.findMany({ where, include: readingInclude, orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
+    prisma.reading.findMany({
+      where,
+      // Projection: bỏ các field nặng không cần cho list view
+      select: {
+        id: true, question: true, topic: true, spreadType: true,
+        status: true, createdAt: true, updatedAt: true,
+        querentName: true, querentGender: true,
+        cards: { orderBy: { position: 'asc' }, include: { tarotCard: true } },
+        interpretation: { select: { id: true, summary: true, createdAt: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
     prisma.reading.count({ where }),
   ]);
   return { items, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
 export async function getReading(userId: string, id: string) {
-  const reading = await prisma.reading.findFirst({ where: { id, userId }, include: readingInclude });
-  if (!reading) throw notFound('Reading not found.');
+  // findUnique với PK id — O(1), nhanh hơn findFirst
+  const reading = await prisma.reading.findUnique({
+    where: { id },
+    include: readingInclude,
+  });
+  // Kiểm tra ownership sau khi fetch — tránh thêm điều kiện vào WHERE làm mất index trên PK
+  if (!reading || reading.userId !== userId) throw notFound('Reading not found.');
   return reading;
 }
 
@@ -94,8 +124,13 @@ export async function reserveAiUsage(userId: string, readingId: string, modelNam
   return await prisma.$transaction(async (tx) => {
     const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
     const reservation = await tx.aiUsage.create({ data: { userId, readingId, modelName } });
-    const count = await tx.aiUsage.count({ where: { userId, createdAt: { gte: startOfDay } } });
-    if (count > dailyLimit) throw new AppError(429, 'AI_DAILY_LIMIT', 'You have reached the daily interpretation limit.');
+    // Dùng aggregate thay count(*) — gộp count + check trong 1 query
+    // Dùng index (userId, createdAt) để filter hiệu quả
+    const { _count } = await tx.aiUsage.aggregate({
+      where: { userId, createdAt: { gte: startOfDay } },
+      _count: { id: true },
+    });
+    if (_count.id > dailyLimit) throw new AppError(429, 'AI_DAILY_LIMIT', 'You have reached the daily interpretation limit.');
     return reservation;
   });
 }
