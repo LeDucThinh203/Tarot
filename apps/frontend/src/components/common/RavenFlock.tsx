@@ -1,40 +1,50 @@
 import { useEffect, useRef } from 'react';
 
-// Render con quạ bằng emoji Unicode — đảm bảo đúng hình dáng trên mọi thiết bị
-// Dùng filter CSS để tint tím/xanh huyền bí thay cho màu gốc của emoji
-const RAVEN_EMOJI = '🐦‍⬛'; // Black Bird — con chim đen, hỗ trợ trên Chrome/Firefox/Safari
+// Vẽ con chim bay kiểu silhouette tối giản — 2 đường cong bezier tạo hình chữ W
+// Đây là cách vẽ chim bay xa phổ biến nhất trong art/design
+// wingT: 0 = cánh ngang, 1 = cánh lên cao, -1 = cánh xuống thấp
+function drawBird(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, wingT: number) {
+  const hw = w / 2;   // nửa sải cánh
+  const dip = w * 0.18 * wingT; // độ cong giữa thân
 
-type Raven = {
+  ctx.beginPath();
+  // Cánh trái: từ đầu cánh trái → trung tâm thân
+  ctx.moveTo(cx - hw, cy + dip);
+  ctx.quadraticCurveTo(cx - hw * 0.5, cy - w * 0.14 * wingT, cx, cy);
+  // Cánh phải: từ trung tâm → đầu cánh phải
+  ctx.quadraticCurveTo(cx + hw * 0.5, cy - w * 0.14 * wingT, cx + hw, cy + dip);
+  ctx.stroke();
+}
+
+type Bird = {
   x: number; y: number;
   vx: number; vy: number;
-  size: number;
+  span: number;      // sải cánh px
   alpha: number;
   wingPhase: number;
   wingSpeed: number;
   wobble: number;
   wobbleSpeed: number;
-  scaleY: number; // cánh vỗ lên xuống bằng cách thay đổi scaleY
 };
 
-function makeRaven(w: number, h: number, fromEdge = false): Raven {
-  const speed = 0.5 + Math.random() * 0.6;
+function makeBird(w: number, h: number, fromEdge = false): Bird {
+  const speed = 0.35 + Math.random() * 0.45;
   const vx = speed * (Math.random() < 0.5 ? 1 : -1);
   return {
-    x: fromEdge ? (vx > 0 ? -60 : w + 60) : Math.random() * w,
-    y: h * (0.05 + Math.random() * 0.38),
+    x: fromEdge ? (vx > 0 ? -50 : w + 50) : Math.random() * w,
+    y: h * (0.04 + Math.random() * 0.40),
     vx,
-    vy: (Math.random() - 0.5) * 0.2,
-    size: 28 + Math.random() * 20,     // 28–48px
-    alpha: 0.70 + Math.random() * 0.25,
+    vy: (Math.random() - 0.5) * 0.15,
+    span: 22 + Math.random() * 20,  // sải cánh 22–42px
+    alpha: 0.55 + Math.random() * 0.35,
     wingPhase: Math.random() * Math.PI * 2,
-    wingSpeed: 0.06 + Math.random() * 0.04,
+    wingSpeed: 0.04 + Math.random() * 0.03,
     wobble: Math.random() * Math.PI * 2,
-    wobbleSpeed: 0.009 + Math.random() * 0.007,
-    scaleY: 1,
+    wobbleSpeed: 0.007 + Math.random() * 0.006,
   };
 }
 
-export function RavenFlock({ count = 6 }: { count?: number }) {
+export function RavenFlock({ count = 12 }: { count?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -48,7 +58,7 @@ export function RavenFlock({ count = 6 }: { count?: number }) {
     canvas.width = w;
     canvas.height = h;
 
-    const ravens: Raven[] = Array.from({ length: count }, () => makeRaven(w, h, false));
+    const birds: Bird[] = Array.from({ length: count }, () => makeBird(w, h, false));
 
     const resize = () => {
       w = window.innerWidth;
@@ -59,46 +69,41 @@ export function RavenFlock({ count = 6 }: { count?: number }) {
     window.addEventListener('resize', resize);
 
     let raf = 0;
-    const draw = () => {
+    const loop = () => {
       ctx.clearRect(0, 0, w, h);
 
-      for (const r of ravens) {
-        r.wingPhase += r.wingSpeed;
-        r.wobble   += r.wobbleSpeed;
-        r.x += r.vx;
-        r.y += Math.sin(r.wobble) * 0.4 + r.vy;
-        // Vỗ cánh: scaleY dao động 0.55 ↔ 1.0 tạo hiệu ứng cánh vỗ
-        r.scaleY = 0.55 + (Math.sin(r.wingPhase) + 1) * 0.225;
+      for (const b of birds) {
+        b.wingPhase += b.wingSpeed;
+        b.wobble    += b.wobbleSpeed;
+        b.x += b.vx;
+        b.y += Math.sin(b.wobble) * 0.3 + b.vy;
 
-        if (r.x > w + 70) Object.assign(r, makeRaven(w, h, true), { vx: -(0.5 + Math.random() * 0.6), x: w + 60 });
-        if (r.x < -70)    Object.assign(r, makeRaven(w, h, true), { vx:  (0.5 + Math.random() * 0.6), x: -60  });
-        r.y = Math.max(h * 0.02, Math.min(h * 0.44, r.y));
+        if (b.x > w + 60) Object.assign(b, makeBird(w, h, true), { vx: -(0.35 + Math.random() * 0.45), x: w + 50 });
+        if (b.x < -60)    Object.assign(b, makeBird(w, h, true), { vx:  (0.35 + Math.random() * 0.45), x: -50  });
+        b.y = Math.max(h * 0.02, Math.min(h * 0.44, b.y));
+
+        // wingT: -1 → 0 → 1 → 0 → -1 mượt mà theo sin
+        const wingT = Math.sin(b.wingPhase);
 
         ctx.save();
-        ctx.translate(r.x, r.y);
-
-        // Lật ngang nếu bay sang trái
-        if (r.vx < 0) ctx.scale(-1, 1);
-
-        // Scale Y để mô phỏng vỗ cánh
-        ctx.scale(1, r.scaleY);
-
-        ctx.globalAlpha = r.alpha;
-        ctx.font = `${r.size}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Glow tím huyền bí
-        ctx.shadowColor = 'rgba(155,127,200,0.8)';
-        ctx.shadowBlur = 12;
-
-        ctx.fillText(RAVEN_EMOJI, 0, 0);
+        ctx.globalAlpha = b.alpha;
+        ctx.strokeStyle = '#b09ad4';
+        ctx.lineWidth = b.span * 0.055;  // độ dày nét tỉ lệ với sải cánh
+        ctx.lineCap = 'round';
+        ctx.shadowColor = 'rgba(185,161,240,0.6)';
+        ctx.shadowBlur = 6;
+        // Lật ngang nếu bay sang trái để đầu chim luôn hướng về phía bay
+        if (b.vx < 0) {
+          ctx.translate(b.x * 2, 0);
+          ctx.scale(-1, 1);
+        }
+        drawBird(ctx, b.x, b.y, b.span, wingT);
         ctx.restore();
       }
 
-      raf = requestAnimationFrame(draw);
+      raf = requestAnimationFrame(loop);
     };
-    draw();
+    loop();
 
     return () => {
       window.removeEventListener('resize', resize);
