@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { tarotApi } from '../services/api';
 import { TarotCardView } from '../components/tarot/TarotCardView';
+import { MothFlutter } from '../components/common/MothFlutter';
 
 const steps = [
   { icon: Compass, number: '01', title: 'Nói điều bạn đang băn khoăn', text: 'Dành một khoảnh khắc gọi tên điều bạn muốn nhìn rõ hơn.' },
@@ -24,6 +25,8 @@ export function HomePage() {
       </div>
 
       <div className="hero-art" aria-label="Hình minh họa lá bài Tarot dưới bầu trời sao" role="img">
+        {/* Bướm đêm bay quanh lá bài hero */}
+        <MothFlutter count={4} />
         {/* Glow pulse */}
         <motion.div
           className="hero-glow"
@@ -156,7 +159,9 @@ export function HomePage() {
       </motion.article>)}</div>
     </section>
 
-    <section className="featured-section"><div className="section-wrap featured-inner">
+    <section className="featured-section"><div className="section-wrap featured-inner" style={{ position: 'relative' }}>
+      {/* Bướm đêm bay quanh 3 lá bài featured */}
+      <MothFlutter count={3} />
       <div className="featured-copy"><div className="eyebrow"><span className="eyebrow-line" /> BỘ BÀI 78 LÁ</div><h2>Mỗi lá bài,<br /><em>một câu chuyện.</em></h2><p>Từ những bước chuyển lớn đến những điều bình dị mỗi ngày — mỗi lá bài đều mở ra một cách nhìn riêng.</p><Link className="text-link" to="/library">Ghé thăm những lá bài <ArrowRight size={15} /></Link></div>
       <div className="featured-cards">{data?.map((card, index) => (
         <motion.div
