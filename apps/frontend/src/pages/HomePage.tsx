@@ -116,7 +116,44 @@ export function HomePage() {
 
     <section id="how-it-works" className="section-wrap process-section">
       <div className="section-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> MỘT KHOẢNG LẶNG DÀNH CHO BẠN</div><h2>Chậm lại. <em>Hỏi. Lắng nghe.</em></h2></div><p>Mỗi trải bài bắt đầu từ điều đang ở trong tâm trí bạn — và khép lại bằng một góc nhìn để mang theo.</p></div>
-      <div className="step-grid">{steps.map(({ icon: Icon, number, title, text }, index) => <motion.article className="step-card" key={number} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * .1 }}><div className="step-icon"><Icon size={20} /></div><span className="step-number">{number}</span><h3>{title}</h3><p>{text}</p></motion.article>)}</div>
+      <div className="step-grid">{steps.map(({ icon: Icon, number, title, text }, index) => <motion.article className="step-card" key={number} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * .1 }}>
+        <div className="step-icon" style={{ position: 'relative', overflow: 'visible' }}>
+          {/* Glow ring pulse */}
+          <motion.span style={{ position: 'absolute', inset: -6, borderRadius: '50%', border: '1px solid rgba(217,188,131,0.3)' }}
+            animate={{ scale: [1, 1.35, 1], opacity: [0.3, 0.7, 0.3] }}
+            transition={{ duration: 2.5 + index * 0.4, repeat: Infinity, ease: 'easeInOut', delay: index * 0.6 }}
+          />
+          {/* Sao lấp lánh xung quanh */}
+          {[...Array(3)].map((_, si) => (
+            <motion.span key={si} style={{
+              position: 'absolute', color: '#d9bc83', fontSize: si === 1 ? '9px' : '7px', pointerEvents: 'none',
+              top: si === 0 ? '-10px' : si === 1 ? '50%' : 'auto',
+              bottom: si === 2 ? '-10px' : 'auto',
+              left: si === 0 ? '60%' : si === 2 ? '-4px' : 'auto',
+              right: si === 1 ? '-12px' : 'auto',
+              transform: si === 1 ? 'translateY(-50%)' : 'none',
+            }}
+              animate={{ opacity: [0, 1, 0], scale: [0.5, 1.3, 0.5] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: index * 0.5 + si * 0.6 }}
+            >✦</motion.span>
+          ))}
+          {/* Icon xoay/pulse theo loại */}
+          <motion.span
+            animate={index === 0
+              ? { rotate: [0, 360] }
+              : index === 1
+              ? { scale: [1, 1.25, 1], filter: ['drop-shadow(0 0 4px rgba(217,188,131,0.4))', 'drop-shadow(0 0 14px rgba(217,188,131,0.9))', 'drop-shadow(0 0 4px rgba(217,188,131,0.4))'] }
+              : { y: [0, -3, 0] }}
+            transition={index === 0
+              ? { duration: 18, repeat: Infinity, ease: 'linear' }
+              : { duration: 2 + index * 0.5, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ display: 'flex' }}
+          >
+            <Icon size={20} />
+          </motion.span>
+        </div>
+        <span className="step-number">{number}</span><h3>{title}</h3><p>{text}</p>
+      </motion.article>)}</div>
     </section>
 
     <section className="featured-section"><div className="section-wrap featured-inner">
