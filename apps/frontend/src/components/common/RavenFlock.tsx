@@ -1,92 +1,16 @@
 import { useEffect, useRef } from 'react';
 
-// Vẽ con quạ bằng canvas primitives — đầu tròn, mỏ nhọn, thân, đuôi chẻ, 2 cánh vỗ
-function drawRaven(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number,
-  scale: number,
-  wingAngle: number, // 0 = cánh ngang, positive = cánh lên
-  facingRight: boolean,
-  alpha: number,
-) {
-  ctx.save();
-  ctx.translate(x, y);
-  if (!facingRight) ctx.scale(-1, 1);
-  ctx.globalAlpha = alpha;
-
-  const s = scale;
-  const wA = Math.sin(wingAngle); // -1..1, biên độ vỗ cánh
-
-  // --- Shadow/glow ---
-  ctx.shadowColor = 'rgba(185,161,240,0.55)';
-  ctx.shadowBlur = 10 * s;
-
-  // Màu tím đậm đủ tương phản trên nền #080811
-  ctx.fillStyle = '#7c5fa0';
-
-  // --- Cánh trái (phía sau thân) ---
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  // Cánh vỗ: đầu cánh di chuyển lên/xuống theo wA
-  ctx.bezierCurveTo(
-    -5 * s, (-8 + wA * 9) * s,
-    -18 * s, (-14 + wA * 12) * s,
-    -24 * s, (-10 + wA * 10) * s,
-  );
-  ctx.bezierCurveTo(
-    -20 * s, (-4 + wA * 5) * s,
-    -10 * s, (-1 + wA * 3) * s,
-    0, 2 * s,
-  );
-  ctx.closePath();
-  ctx.fill();
-
-  // --- Cánh phải (phía trước) ---
-  ctx.beginPath();
-  ctx.moveTo(2 * s, 0);
-  ctx.bezierCurveTo(
-    6 * s, (-7 + wA * 8) * s,
-    16 * s, (-13 + wA * 11) * s,
-    22 * s, (-9 + wA * 9) * s,
-  );
-  ctx.bezierCurveTo(
-    18 * s, (-3 + wA * 4) * s,
-    9 * s, (0 + wA * 2) * s,
-    2 * s, 2 * s,
-  );
-  ctx.closePath();
-  ctx.fill();
-
-  // --- Thân ---
-  ctx.beginPath();
-  ctx.ellipse(0, 3 * s, 3.5 * s, 6 * s, -0.15, 0, Math.PI * 2);
-  ctx.fill();
-
-  // --- Đầu ---
-  ctx.beginPath();
-  ctx.arc(2 * s, -4 * s, 3.2 * s, 0, Math.PI * 2);
-  ctx.fill();
-
-  // --- Mỏ nhọn ---
-  ctx.beginPath();
-  ctx.moveTo(4.5 * s, -5.5 * s);
-  ctx.lineTo(11 * s, -4 * s);
-  ctx.lineTo(5 * s, -3 * s);
-  ctx.closePath();
-  ctx.fill();
-
-  // --- Đuôi chẻ đôi ---
-  ctx.beginPath();
-  ctx.moveTo(-2 * s, 8 * s);
-  ctx.lineTo(-5 * s, 15 * s);
-  ctx.lineTo(-1 * s, 12 * s);
-  ctx.lineTo(1 * s, 15 * s);
-  ctx.lineTo(3 * s, 8 * s);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.restore();
-}
+// Dùng SVG path chất lượng cao — silhouette chim đang bay nhìn từ phía trên/nghiêng
+// Path này là dáng chim bay cổ điển: 2 cánh cong lên, thân thon, đuôi nhọn
+// Scale gốc: ~100x40px, center tại (50,20)
+const BIRD_PATHS = [
+  // Chim bay cánh xòe — dùng cho wingAngle ~ 0 (cánh ngang)
+  'M50,20 C40,10 20,5 5,12 C15,14 25,16 30,18 C20,16 10,18 2,24 C12,22 22,20 30,20 C35,22 40,24 50,28 C60,24 65,22 70,20 C78,20 88,22 98,24 C90,18 80,16 70,18 C75,16 85,14 95,12 C80,5 60,10 50,20Z',
+  // Chim bay cánh đập lên
+  'M50,22 C40,8 18,2 4,8 C14,11 24,15 30,18 C20,14 10,14 2,18 C12,18 22,18 30,20 C35,21 42,22 50,26 C58,22 65,21 70,20 C78,18 88,18 98,18 C90,14 80,14 70,18 C76,15 86,11 96,8 C82,2 60,8 50,22Z',
+  // Chim bay cánh đập xuống
+  'M50,18 C42,26 22,30 6,26 C16,22 26,20 32,20 C22,22 12,26 4,30 C14,26 24,24 32,22 C37,22 43,22 50,24 C57,22 63,22 68,22 C76,24 86,26 96,30 C88,26 78,22 68,20 C74,20 84,22 94,26 C78,30 58,26 50,18Z',
+];
 
 type Raven = {
   x: number; y: number;
@@ -100,20 +24,19 @@ type Raven = {
 };
 
 function makeRaven(w: number, h: number, fromEdge = false): Raven {
-  const scale = 0.9 + Math.random() * 0.7;
-  const speed = 0.5 + Math.random() * 0.6;
+  const speed = 0.4 + Math.random() * 0.5;
   const vx = speed * (Math.random() < 0.5 ? 1 : -1);
   return {
-    x: fromEdge ? (vx > 0 ? -40 : w + 40) : Math.random() * w,
+    x: fromEdge ? (vx > 0 ? -60 : w + 60) : Math.random() * w,
     y: h * (0.04 + Math.random() * 0.38),
     vx,
-    vy: (Math.random() - 0.5) * 0.2,
-    scale,
-    alpha: 0.6 + Math.random() * 0.35,
+    vy: (Math.random() - 0.5) * 0.15,
+    scale: 0.28 + Math.random() * 0.22, // path gốc ~100px → scale 0.28-0.5 = 28-50px
+    alpha: 0.55 + Math.random() * 0.35,
     wingPhase: Math.random() * Math.PI * 2,
-    wingSpeed: 0.06 + Math.random() * 0.05,
+    wingSpeed: 0.055 + Math.random() * 0.04,
     wobble: Math.random() * Math.PI * 2,
-    wobbleSpeed: 0.01 + Math.random() * 0.008,
+    wobbleSpeed: 0.008 + Math.random() * 0.007,
   };
 }
 
@@ -125,6 +48,9 @@ export function RavenFlock({ count = 5 }: { count?: number }) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Pre-parse paths
+    const paths = BIRD_PATHS.map((d) => new Path2D(d));
 
     let w = window.innerWidth;
     let h = window.innerHeight;
@@ -148,23 +74,35 @@ export function RavenFlock({ count = 5 }: { count?: number }) {
       for (const r of ravens) {
         r.wingPhase += r.wingSpeed;
         r.wobble += r.wobbleSpeed;
-
         r.x += r.vx;
-        r.y += Math.sin(r.wobble) * 0.4 + r.vy;
+        r.y += Math.sin(r.wobble) * 0.35 + r.vy;
 
-        // Tái sinh từ cạnh đối diện
-        if (r.x > w + 50) Object.assign(r, { ...makeRaven(w, h, true), vx: Math.abs(makeRaven(w, h).vx) * -1, x: w + 40 });
-        if (r.x < -50)    Object.assign(r, { ...makeRaven(w, h, true), vx: Math.abs(makeRaven(w, h).vx),      x: -40  });
-        r.y = Math.max(h * 0.02, Math.min(h * 0.45, r.y));
+        if (r.x > w + 70)  Object.assign(r, makeRaven(w, h, true), { vx: -(0.4 + Math.random() * 0.5), x: w + 60 });
+        if (r.x < -70)     Object.assign(r, makeRaven(w, h, true), { vx:  (0.4 + Math.random() * 0.5), x: -60 });
+        r.y = Math.max(h * 0.02, Math.min(h * 0.44, r.y));
 
-        drawRaven(
-          ctx,
-          r.x, r.y,
-          r.scale,
-          r.wingPhase,
-          r.vx > 0,
-          r.alpha,
-        );
+        // Chọn frame cánh theo wingPhase — 3 frames tạo illusion vỗ cánh
+        const frame = Math.floor(((Math.sin(r.wingPhase) + 1) / 2) * 2.99); // 0, 1, 2
+        const path = paths[frame]!;
+
+        ctx.save();
+        ctx.translate(r.x, r.y);
+
+        // Lật ngang nếu bay sang trái, pivot tại center path (50, 20)
+        if (r.vx < 0) {
+          ctx.translate(100 * r.scale, 0);
+          ctx.scale(-r.scale, r.scale);
+        } else {
+          ctx.scale(r.scale, r.scale);
+        }
+        ctx.translate(-50, -20); // căn center path về origin
+
+        ctx.globalAlpha = r.alpha;
+        ctx.fillStyle = '#8b6ab0';
+        ctx.shadowColor = 'rgba(185,161,240,0.7)';
+        ctx.shadowBlur = 8;
+        ctx.fill(path);
+        ctx.restore();
       }
 
       raf = requestAnimationFrame(draw);
