@@ -12,7 +12,7 @@ import { loginSchema, registerSchema } from './auth.schema.js';
 import * as service from './auth.service.js';
 
 export const authRouter = Router();
-const refreshCookie = { httpOnly: true, secure: env.COOKIE_SECURE, sameSite: 'strict' as const, path: '/api/v1/auth', maxAge: env.REFRESH_TOKEN_TTL_DAYS * 86400000 };
+const refreshCookie = { httpOnly: true, secure: env.COOKIE_SECURE, sameSite: env.COOKIE_SAME_SITE, path: '/api/v1/auth', maxAge: env.REFRESH_TOKEN_TTL_DAYS * 86400000 };
 const guestClaimCookie = { ...refreshCookie };
 const guestSessionLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false });
 function sendSession(res: Parameters<typeof success>[0], session: Awaited<ReturnType<typeof service.login>>) {

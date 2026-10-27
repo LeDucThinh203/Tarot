@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: mystic-tarot-backend
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm run render:build
+    startCommand: npm run start:backend
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        value: file:./prisma/dev.db
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAME_SITE
+        value: "none"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ACCESS_TOKEN_TTL
+        value: 15m
+      - key: REFRESH_TOKEN_TTL_DAYS
+        value: 30
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: GEMINI_EMBEDDING_DIMENSION
+        value: 768
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o-mini
+      - key: OPENROUTER_EMBEDDING_MODEL
+        value: google/gemini-embedding-001
+      - key: SEED_ADMIN_EMAIL
+        value: mystic.admin@example.com
+      - key: SEED_ADMIN_PASSWORD
+        generateValue: true
+      - key: SEED_USER_EMAIL
+        value: mystic.user@example.com
+      - key: SEED_USER_PASSWORD
+        generateValue: true
+      - key: AI_DAILY_LIMIT_PER_USER
+        value: 8
+      - key: GEMINI_TIMEOUT_MS
+        value: 90000

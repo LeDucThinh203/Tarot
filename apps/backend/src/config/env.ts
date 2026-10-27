@@ -22,6 +22,7 @@ const schema = z.object({
   ACCESS_TOKEN_TTL: z.string().regex(/^\d+[smhd]$/, 'Use a short duration such as 15m.').default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
   COOKIE_SECURE: z.string().default('false').transform((v) => v === 'true'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   RAG_TOP_K: z.coerce.number().int().min(1).max(20).default(5),
   RAG_SIMILARITY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.25),
   RAG_CHUNK_SIZE: z.coerce.number().int().min(200).max(5000).default(1100),

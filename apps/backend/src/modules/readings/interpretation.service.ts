@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma/client.js';
 import { env } from '../../config/env.js';
 import { prisma } from '../../infrastructure/database/prisma.js';
 import type { SearchResult } from '../rag/vector-store.js';

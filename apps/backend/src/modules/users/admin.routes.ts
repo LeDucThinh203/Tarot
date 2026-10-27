@@ -6,6 +6,7 @@ import { AppError, notFound } from '../../common/errors.js';
 import { success } from '../../common/response.js';
 import { validate } from '../../common/validate.js';
 import { prisma } from '../../infrastructure/database/prisma.js';
+import { env } from '../../config/env.js';
 import { hashPassword } from '../auth/password.service.js';
 
 export const adminRouter = Router();
@@ -25,18 +26,198 @@ const updateAccountSchema = z.object({
 const accountStatusSchema = z.object({ disabled: z.boolean() }).strict();
 
 adminRouter.get('/dashboard', asyncHandler(async (_req, res) => {
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(now);
   today.setUTCHours(0, 0, 0, 0);
-  const [users, readings, interpretedReadings, cards, documents, chunks, aiRequestsToday] = await Promise.all([
+
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setUTCHours(0, 0, 0, 0);
+
+  const [
+    users,
+    activeUsers,
+    guests,
+    newUsersThisWeek,
+    readings,
+    interpretedReadings,
+    drawnReadings,
+    readingsThisWeek,
+    cards,
+    documents,
+    chunks,
+    readyDocs,
+    processingDocs,
+    failedDocs,
+    aiRequestsToday,
+    aiRequestsTotal,
+    aiTokenStatsToday,
+    aiTokenStatsTotal,
+    recentReadings,
+    recentUsers,
+    recentAiUsage,
+    ragState,
+    allTopics,
+    allSpreads,
+    readingsPast7Days,
+    aiUsagePast7Days,
+  ] = await Promise.all([
     prisma.user.count({ where: { isGuest: false } }),
+    prisma.user.count({ where: { isGuest: false, disabledAt: null } }),
+    prisma.user.count({ where: { isGuest: true } }),
+    prisma.user.count({ where: { isGuest: false, createdAt: { gte: sevenDaysAgo } } }),
     prisma.reading.count(),
     prisma.reading.count({ where: { status: 'INTERPRETED' } }),
+    prisma.reading.count({ where: { status: 'DRAWN' } }),
+    prisma.reading.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
     prisma.tarotCard.count(),
     prisma.knowledgeDocument.count(),
     prisma.knowledgeChunk.count(),
+    prisma.knowledgeDocument.count({ where: { status: 'READY' } }),
+    prisma.knowledgeDocument.count({ where: { status: 'PROCESSING' } }),
+    prisma.knowledgeDocument.count({ where: { status: 'FAILED' } }),
     prisma.aiUsage.count({ where: { createdAt: { gte: today } } }),
+    prisma.aiUsage.count(),
+    prisma.aiUsage.aggregate({
+      where: { createdAt: { gte: today } },
+      _sum: { promptTokens: true, outputTokens: true },
+    }),
+    prisma.aiUsage.aggregate({
+      _sum: { promptTokens: true, outputTokens: true },
+    }),
+    prisma.reading.findMany({
+      take: 6,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        querentName: true,
+        question: true,
+        topic: true,
+        spreadType: true,
+        status: true,
+        createdAt: true,
+        user: { select: { displayName: true, email: true } },
+      },
+    }),
+    prisma.user.findMany({
+      where: { isGuest: false },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        username: true,
+        role: true,
+        disabledAt: true,
+        createdAt: true,
+        _count: { select: { readings: true } },
+      },
+    }),
+    prisma.aiUsage.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        modelName: true,
+        promptTokens: true,
+        outputTokens: true,
+        createdAt: true,
+        user: { select: { displayName: true } },
+      },
+    }),
+    prisma.ragIndexState.findFirst(),
+    prisma.reading.groupBy({
+      by: ['topic'],
+      _count: { topic: true },
+    }),
+    prisma.reading.groupBy({
+      by: ['spreadType'],
+      _count: { spreadType: true },
+    }),
+    prisma.reading.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      select: { createdAt: true },
+    }),
+    prisma.aiUsage.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      select: { createdAt: true },
+    }),
   ]);
-  success(res, { users, readings, interpretedReadings, cards, documents, chunks, aiRequestsToday });
+
+  const dailyTrends = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayLabel = `${d.getDate()}/${d.getMonth() + 1}`;
+    
+    const dayReadings = readingsPast7Days.filter((r) => r.createdAt.toISOString().slice(0, 10) === dateStr).length;
+    const dayAi = aiUsagePast7Days.filter((a) => a.createdAt.toISOString().slice(0, 10) === dateStr).length;
+    
+    dailyTrends.push({
+      date: dateStr,
+      label: dayLabel,
+      readings: dayReadings,
+      aiRequests: dayAi,
+    });
+  }
+
+  const topicBreakdown = (['LOVE', 'CAREER', 'FINANCE', 'PERSONAL_GROWTH', 'GENERAL'] as const).map((t) => {
+    const found = allTopics.find((item) => item.topic === t);
+    const count = found?._count.topic ?? 0;
+    const percentage = readings > 0 ? Math.round((count / readings) * 100) : 0;
+    return { topic: t, count, percentage };
+  });
+
+  const spreadBreakdown = (['ONE_CARD', 'THREE_CARDS', 'FIVE_CARDS'] as const).map((s) => {
+    const found = allSpreads.find((item) => item.spreadType === s);
+    const count = found?._count.spreadType ?? 0;
+    const percentage = readings > 0 ? Math.round((count / readings) * 100) : 0;
+    return { spreadType: s, count, percentage };
+  });
+
+  const tokensToday = (aiTokenStatsToday._sum.promptTokens ?? 0) + (aiTokenStatsToday._sum.outputTokens ?? 0);
+  const tokensAllTime = (aiTokenStatsTotal._sum.promptTokens ?? 0) + (aiTokenStatsTotal._sum.outputTokens ?? 0);
+  const interpretationRate = readings > 0 ? Math.round((interpretedReadings / readings) * 100) : 100;
+
+  success(res, {
+    users,
+    activeUsers,
+    guests,
+    newUsersThisWeek,
+    readings,
+    interpretedReadings,
+    drawnReadings,
+    readingsThisWeek,
+    interpretationRate,
+    cards,
+    documents,
+    chunks,
+    readyDocs,
+    processingDocs,
+    failedDocs,
+    aiRequestsToday,
+    aiRequestsTotal,
+    tokensToday,
+    tokensAllTime,
+    topicBreakdown,
+    spreadBreakdown,
+    dailyTrends,
+    recentReadings,
+    recentUsers,
+    recentAiUsage,
+    systemHealth: {
+      database: 'healthy',
+      geminiConfigured: Boolean(env.GEMINI_API_KEY),
+      geminiModel: env.GEMINI_MODEL,
+      openRouterConfigured: Boolean(env.OPENROUTER_API_KEY),
+      openRouterModel: env.OPENROUTER_MODEL,
+      embeddingModel: ragState?.embeddingModel ?? env.GEMINI_EMBEDDING_MODEL,
+      dimension: ragState?.dimension ?? env.GEMINI_EMBEDDING_DIMENSION,
+      dailyLimitPerUser: env.AI_DAILY_LIMIT_PER_USER,
+    },
+  });
 }));
 
 adminRouter.get('/users', validate(usersQuerySchema, 'query'), asyncHandler(async (req, res) => {
